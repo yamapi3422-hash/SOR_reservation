@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>線上課程預約</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; color: #333; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
-    h2 { color: #00B900; text-align: center; margin-bottom: 20px; }
-    .form-group { margin-bottom: 15px; }
-    label { font-weight: bold; display: block; margin-bottom: 5px; }
-    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-    button { width: 100%; background-color: #00B900; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    button:disabled { background-color: #ccc; }
-    #loading { text-align: center; display: none; margin-top: 10px; color: #666; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background-color: #f4f6f9; color: #333; margin: 0; }
+    .card { background: #ffffff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 480px; margin: 20px auto; }
+    h2 { color: #00B900; text-align: center; margin-top: 0; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    label { font-weight: 600; display: block; margin-bottom: 6px; font-size: 14px; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #fff; }
+    button { width: 100%; background-color: #00B900; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #loading { text-align: center; padding: 20px; color: #666; font-size: 15px; }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>線上課程預約</h2>
-    <div id="loading">載入中，請稍候...</div>
+    <div id="loading">系統載入中，請稍候...</div>
     <form id="bookingForm" style="display:none;">
       <div class="form-group">
         <label>選擇預約時段</label>
@@ -36,11 +36,11 @@
       </div>
       <div class="form-group">
         <label>Email 信箱</label>
-        <input type="email" id="email" required placeholder="接收確認信用">
+        <input type="email" id="email" required placeholder="用於接收確認信">
       </div>
       <div class="form-group">
         <label>備註事項</label>
-        <textarea id="note" rows="3" placeholder="特殊需求或學員狀況"></textarea>
+        <textarea id="note" rows="3" placeholder="如有特殊需求請在此註明"></textarea>
       </div>
       <input type="hidden" id="lineUserId">
       <button type="submit" id="submitBtn">確認預約</button>
@@ -51,8 +51,17 @@
     const LIFF_ID = '2011272724-gossLJr8';
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
 
+    // 跨域 API 請求封裝
+    async function apiRequest(payload) {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      return await response.json();
+    }
+
     async function initLiff() {
-      document.getElementById('loading').style.display = 'block';
       try {
         await liff.init({ liffId: LIFF_ID });
         if (!liff.isLoggedIn()) {
@@ -61,7 +70,7 @@
         }
         const profile = await liff.getProfile();
         document.getElementById('lineUserId').value = profile.userId;
-        loadSlots();
+        await loadSlots();
       } catch (err) {
         alert('LIFF 初始化失敗：' + err.message);
       }
@@ -69,28 +78,22 @@
 
     async function loadSlots() {
       try {
-        // 關鍵修正：加入 headers text/plain 避開 Failed to fetch 跨域錯誤
-        const res = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'getSlots' })
-        }).then(r => r.json());
-
+        const res = await apiRequest({ action: 'getSlots' });
         const select = document.getElementById('bookingTime');
         select.innerHTML = '';
-        if (!res.slots || res.slots.length === 0) {
-          select.innerHTML = '<option value="">目前暫無可預約時段</option>';
-          document.getElementById('submitBtn').disabled = true;
-        } else {
+
+        if (res.success && res.slots && res.slots.length > 0) {
           res.slots.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.slot;
             opt.textContent = s.display;
             select.appendChild(opt);
           });
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('bookingForm').style.display = 'block';
+        } else {
+          document.getElementById('loading').textContent = '目前暫無可預約時段';
         }
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('bookingForm').style.display = 'block';
       } catch (e) {
         alert('載入時段失敗：' + e.message);
       }
@@ -112,13 +115,7 @@
       };
 
       try {
-        // 關鍵修正：加入 headers text/plain 避開 Failed to fetch 跨域錯誤
-        const res = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'submitBooking', formData: formData })
-        }).then(r => r.json());
-
+        const res = await apiRequest({ action: 'submitBooking', formData: formData });
         if (res.success) {
           alert('預約成功！預約編號：' + res.bookingId);
           liff.closeWindow();
@@ -126,10 +123,9 @@
           alert('預約失敗：' + res.message);
           btn.disabled = false;
           btn.textContent = '確認預約';
-          loadSlots();
         }
       } catch (err) {
-        alert('網路連線失敗，請稍後再試');
+        alert('提交失敗，請檢查網路連線。');
         btn.disabled = false;
         btn.textContent = '確認預約';
       }
