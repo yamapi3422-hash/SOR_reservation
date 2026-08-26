@@ -3,162 +3,247 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>線上課程預約</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <title>線上課程預約系統</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background-color: #f4f6f9; color: #333; margin: 0; }
-    .card { background: #ffffff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 480px; margin: 10px auto; }
-    h2 { color: #00B900; text-align: center; margin-top: 0; margin-bottom: 20px; }
-    .form-group { margin-bottom: 16px; }
-    label { font-weight: 600; display: block; margin-bottom: 6px; font-size: 14px; }
-    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #fff; }
-    button { width: 100%; background-color: #00B900; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    button:disabled { background-color: #ccc; cursor: not-allowed; }
-    #slotContainer { display: none; margin-top: 10px; }
-    .no-slot { color: #d9534f; font-size: 14px; font-weight: bold; margin-top: 5px; display: none; }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .booking-card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      width: 100%;
+      max-width: 480px;
+    }
+    .title {
+      color: #00c853;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 24px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #00c853;
+    }
+    .error-message {
+      color: #d32f2f;
+      font-size: 14px;
+      margin-top: 6px;
+      display: none;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: #00c853;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+    button:hover {
+      background-color: #00a844;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>線上課程預約</h2>
-    
-    <div class="form-group">
-      <label>1. 請選擇預約日期</label>
-      <input type="date" id="bookingDate">
-    </div>
 
-    <form id="bookingForm" style="display:none;">
-      <div class="form-group" id="slotContainer">
-        <label>2. 請選擇可預約時段</label>
-        <select id="bookingTime" required></select>
-        <div id="noSlotMsg" class="no-slot">該日期無開放預約時段，請選擇其他日期</div>
+  <div class="booking-card">
+    <h2 class="title">線上課程預約</h2>
+
+    <form id="bookingForm">
+      <!-- 1. 預約日期 -->
+      <div class="form-group">
+        <label for="bookingDate">1. 請選擇預約日期</label>
+        <input type="date" id="bookingDate" required>
       </div>
 
+      <!-- 2. 可預約時段 -->
       <div class="form-group">
-        <label>家長姓名</label>
-        <input type="text" id="name" required placeholder="請輸入姓名">
+        <label for="bookingTime">2. 請選擇可預約時段</label>
+        <select id="bookingTime" required disabled>
+          <option value="">-- 請先選擇日期 --</option>
+        </select>
+        <div id="noSlotMsg" class="error-message">該日期無開放預約時段，請選擇其他日期</div>
       </div>
+
+      <!-- 家長姓名 -->
       <div class="form-group">
-        <label>聯絡電話</label>
-        <input type="tel" id="phone" required placeholder="請輸入電話">
+        <label for="name">家長姓名</label>
+        <input type="text" id="name" placeholder="請輸入姓名" required>
       </div>
+
+      <!-- 聯絡電話 -->
       <div class="form-group">
-        <label>Email 信箱</label>
-        <input type="email" id="email" required placeholder="用於接收確認信">
+        <label for="phone">聯絡電話</label>
+        <input type="tel" id="phone" placeholder="請輸入電話" required>
       </div>
+
+      <!-- Email -->
       <div class="form-group">
-        <label>備註事項</label>
+        <label for="email">Email 信箱</label>
+        <input type="email" id="email" placeholder="用於接收確認信" required>
+      </div>
+
+      <!-- 備註事項 -->
+      <div class="form-group">
+        <label for="note">備註事項</label>
         <textarea id="note" rows="3" placeholder="如有特殊需求請在此註明"></textarea>
       </div>
-      <input type="hidden" id="lineUserId">
+
+      <!-- 送出按鈕 -->
       <button type="submit" id="submitBtn">確認預約</button>
     </form>
   </div>
 
   <script>
-    const LIFF_ID = '2011272724-gossLJr8';
+    // ⚠️ 關鍵：請將此處替換為您的 Apps Script 網頁應用程式 URL
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
 
-    // 限制預約日期最小為今天
-    const dateInput = document.getElementById('bookingDate');
-    dateInput.min = new Date().toISOString().split('T')[0];
+    const bookingDateInput = document.getElementById('bookingDate');
+    const bookingTimeSelect = document.getElementById('bookingTime');
+    const noSlotMsg = document.getElementById('noSlotMsg');
+    const bookingForm = document.getElementById('bookingForm');
+    const submitBtn = document.getElementById('submitBtn');
 
-    async function apiRequest(payload) {
-      const response = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        redirect: 'follow'
-      });
-      return await response.json();
-    }
-
-    async function initLiff() {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) { liff.login(); return; }
-        const profile = await liff.getProfile();
-        document.getElementById('lineUserId').value = profile.userId;
-      } catch (err) {
-        console.error('LIFF Init Error:', err);
-      }
-    }
-
-    // 點選小日曆變更日期時觸發
-    dateInput.addEventListener('change', async function() {
+    // 當選擇日期變更時：向 GAS 抓取該日期的時段
+    bookingDateInput.addEventListener('change', function() {
       const selectedDate = this.value;
       if (!selectedDate) return;
 
-      const slotSelect = document.getElementById('bookingTime');
-      const slotContainer = document.getElementById('slotContainer');
-      const noSlotMsg = document.getElementById('noSlotMsg');
-      const submitBtn = document.getElementById('submitBtn');
-
-      slotContainer.style.display = 'block';
-      slotSelect.style.display = 'block';
-      slotSelect.innerHTML = '<option value="">搜尋時段中...</option>';
-      document.getElementById('bookingForm').style.display = 'block';
+      // 重置選單狀態
+      bookingTimeSelect.innerHTML = '<option value="">時段載入中...</option>';
+      bookingTimeSelect.disabled = true;
       noSlotMsg.style.display = 'none';
 
-      try {
-        const res = await apiRequest({ action: 'getSlotsByDate', date: selectedDate });
-        slotSelect.innerHTML = '';
-
-        if (res.success && res.slots && res.slots.length > 0) {
-          submitBtn.disabled = false;
-          res.slots.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.slot;
-            opt.textContent = s.display;
-            selectOptionAppend(slotSelect, opt);
+      // 呼叫 GAS (getSlotsByDate)
+      fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'cors',
+        redirect: 'follow', // 避免轉址阻擋
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8' // 避免 CORS 預檢失敗
+        },
+        body: JSON.stringify({
+          action: 'getSlotsByDate',
+          date: selectedDate
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.slots && data.slots.length > 0) {
+          bookingTimeSelect.innerHTML = '<option value="">-- 請選擇時段 --</option>';
+          data.slots.forEach(slotItem => {
+            const option = document.createElement('option');
+            option.value = slotItem.slot;
+            option.textContent = slotItem.display;
+            bookingTimeSelect.appendChild(option);
           });
+          bookingTimeSelect.disabled = false;
         } else {
-          slotSelect.style.display = 'none';
+          bookingTimeSelect.innerHTML = '<option value="">-- 無可預約時段 --</option>';
+          bookingTimeSelect.disabled = true;
           noSlotMsg.style.display = 'block';
-          submitBtn.disabled = true;
         }
-      } catch (e) {
-        alert('時段載入失敗，請確認網路狀況。');
-      }
+      })
+      .catch(err => {
+        console.error('抓取時段錯誤:', err);
+        bookingTimeSelect.innerHTML = '<option value="">-- 載入失敗 --</option>';
+        alert('無法取得預約時段，請檢查網路連線或稍後再試。');
+      });
     });
 
-    function selectOptionAppend(selectEl, optionEl) {
-      selectEl.appendChild(optionEl);
-    }
-
-    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+    // 表單送出：將預約資料發送到 GAS (submitBooking)
+    bookingForm.addEventListener('submit', function(e) {
       e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.textContent = '預約處理中...';
+
+      if (!bookingTimeSelect.value) {
+        alert('請先選擇有效的預約時段！');
+        return;
+      }
+
+      // 按鈕防重複點擊
+      submitBtn.disabled = true;
+      submitBtn.textContent = '預約處理中...';
 
       const formData = {
-        bookingTime: document.getElementById('bookingTime').value,
+        bookingTime: bookingTimeSelect.value,
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
         note: document.getElementById('note').value,
-        lineUserId: document.getElementById('lineUserId').value
+        lineUserId: '' // 可依需要帶入 LIFF ID
       };
 
-      try {
-        const res = await apiRequest({ action: 'submitBooking', formData: formData });
-        if (res.success) {
-          alert('預預約成功！預約編號：' + res.bookingId);
-          liff.closeWindow();
+      // 呼叫 GAS (submitBooking)
+      fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'cors',
+        redirect: 'follow', // 核心優化：允許追蹤轉址
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8' // 核心優化：避免 CORS 預檢失敗
+        },
+        body: JSON.stringify({
+          action: 'submitBooking',
+          formData: formData
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('預約成功！您的預約單號為：' + data.bookingId);
+          bookingForm.reset();
+          bookingTimeSelect.innerHTML = '<option value="">-- 請先選擇日期 --</option>';
+          bookingTimeSelect.disabled = true;
         } else {
-          alert('預約失敗：' + res.message);
-          btn.disabled = false;
-          btn.textContent = '確認預約';
+          alert('預約失敗：' + (data.message || '未知錯誤'));
         }
-      } catch (err) {
+      })
+      .catch(err => {
+        console.error('送出預約錯誤:', err);
         alert('網路連線異常，請重新嘗試。');
-        btn.disabled = false;
-        btn.textContent = '確認預約';
-      }
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '確認預約';
+      });
     });
-
-    window.onload = initLiff;
   </script>
 </body>
 </html>
