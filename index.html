@@ -43,7 +43,7 @@
         <textarea id="note" rows="3" placeholder="特殊需求或學員狀況"></textarea>
       </div>
       <input type="hidden" id="lineUserId">
-      <button type="submit" id="submitBtn">確認預預約</button>
+      <button type="submit" id="submitBtn">確認預約</button>
     </form>
   </div>
 
@@ -69,8 +69,10 @@
 
     async function loadSlots() {
       try {
+        // 關鍵修正：加入 headers text/plain 避開 Failed to fetch 跨域錯誤
         const res = await fetch(GAS_URL, {
           method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action: 'getSlots' })
         }).then(r => r.json());
 
@@ -110,8 +112,10 @@
       };
 
       try {
+        // 關鍵修正：加入 headers text/plain 避開 Failed to fetch 跨域錯誤
         const res = await fetch(GAS_URL, {
           method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action: 'submitBooking', formData: formData })
         }).then(r => r.json());
 
@@ -127,7 +131,7 @@
       } catch (err) {
         alert('網路連線失敗，請稍後再試');
         btn.disabled = false;
-        btn.textContent = '確認預預約';
+        btn.textContent = '確認預約';
       }
     });
 
