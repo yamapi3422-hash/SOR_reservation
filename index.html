@@ -55,6 +55,13 @@
     input:focus, select:focus, textarea:focus {
       border-color: #00c853;
     }
+    /* 紅色提醒字體類別 */
+    .closed-days-notice {
+      color: #d32f2f;
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-top: 6px;
+    }
     .error-message {
       color: #d32f2f;
       font-size: 14px;
@@ -92,6 +99,8 @@
       <div class="form-group">
         <label for="bookingDate">1. 請選擇預約日期</label>
         <input type="date" id="bookingDate" required>
+        <!-- 下方自動顯示未開放日期的紅字提示區域 -->
+        <div id="closedDaysNotice" class="closed-days-notice"></div>
       </div>
 
       <!-- 2. 可預約時段 -->
@@ -133,32 +142,49 @@
   </div>
 
   <script>
-    // ⚠️ 關鍵：請將此處替換為您的 Apps Script 網頁應用程式 URL
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
+    // ⚠️ 請填入您的 Apps Script 部署 URL
+    const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
 
     const bookingDateInput = document.getElementById('bookingDate');
     const bookingTimeSelect = document.getElementById('bookingTime');
+    const closedDaysNotice = document.getElementById('closedDaysNotice');
     const noSlotMsg = document.getElementById('noSlotMsg');
     const bookingForm = document.getElementById('bookingForm');
     const submitBtn = document.getElementById('submitBtn');
 
-    // 當選擇日期變更時：向 GAS 抓取該日期的時段
+    // 網頁載入時，自動向 GAS 取得不開放的星期幾，並填寫紅字提示
+    window.addEventListener('DOMContentLoaded', function() {
+      fetch(GAS_URL, {
+        method: 'POST',
+        mode: 'cors',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'getClosedDays' })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.closedDaysText) {
+          closedDaysNotice.textContent = data.closedDaysText;
+        }
+      })
+      .catch(err => console.error('無法載入休假提示:', err));
+    });
+
+    // 當選擇日期變更時
     bookingDateInput.addEventListener('change', function() {
       const selectedDate = this.value;
       if (!selectedDate) return;
 
-      // 重置選單狀態
       bookingTimeSelect.innerHTML = '<option value="">時段載入中...</option>';
       bookingTimeSelect.disabled = true;
       noSlotMsg.style.display = 'none';
 
-      // 呼叫 GAS (getSlotsByDate)
       fetch(GAS_URL, {
         method: 'POST',
         mode: 'cors',
-        redirect: 'follow', // 避免轉址阻擋
+        redirect: 'follow',
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8' // 避免 CORS 預檢失敗
+          'Content-Type': 'text/plain;charset=utf-8'
         },
         body: JSON.stringify({
           action: 'getSlotsByDate',
@@ -167,29 +193,39 @@
       })
       .then(res => res.json())
       .then(data => {
-        if (data.success && data.slots && data.slots.length > 0) {
-          bookingTimeSelect.innerHTML = '<option value="">-- 請選擇時段 --</option>';
-          data.slots.forEach(slotItem => {
-            const option = document.createElement('option');
-            option.value = slotItem.slot;
-            option.textContent = slotItem.display;
-            bookingTimeSelect.appendChild(option);
-          });
-          bookingTimeSelect.disabled = false;
-        } else {
-          bookingTimeSelect.innerHTML = '<option value="">-- 無可預約時段 --</option>';
-          bookingTimeSelect.disabled = true;
-          noSlotMsg.style.display = 'block';
+        if (data.success) {
+          if (data.isHoliday) {
+            // 特殊休假日
+            bookingTimeSelect.innerHTML = '<option value="">-- 本日休館 / 不開放 --</option>';
+            bookingTimeSelect.disabled = true;
+            noSlotMsg.textContent = data.message || '該日期為不開放預約日';
+            noSlotMsg.style.display = 'block';
+          } else if (data.slots && data.slots.length > 0) {
+            // 正常時段
+            bookingTimeSelect.innerHTML = '<option value="">-- 請選擇時段 --</option>';
+            data.slots.forEach(slotItem => {
+              const option = document.createElement('option');
+              option.value = slotItem.slot;
+              option.textContent = slotItem.display;
+              bookingTimeSelect.appendChild(option);
+            });
+            bookingTimeSelect.disabled = false;
+          } else {
+            // 常規無開放時段
+            bookingTimeSelect.innerHTML = '<option value="">-- 無可預約時段 --</option>';
+            bookingTimeSelect.disabled = true;
+            noSlotMsg.textContent = '該日期無開放預約時段，請選擇其他日期';
+            noSlotMsg.style.display = 'block';
+          }
         }
       })
       .catch(err => {
         console.error('抓取時段錯誤:', err);
         bookingTimeSelect.innerHTML = '<option value="">-- 載入失敗 --</option>';
-        alert('無法取得預約時段，請檢查網路連線或稍後再試。');
       });
     });
 
-    // 表單送出：將預約資料發送到 GAS (submitBooking)
+    // 表單送出
     bookingForm.addEventListener('submit', function(e) {
       e.preventDefault();
 
@@ -198,7 +234,6 @@
         return;
       }
 
-      // 按鈕防重複點擊
       submitBtn.disabled = true;
       submitBtn.textContent = '預約處理中...';
 
@@ -208,16 +243,15 @@
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
         note: document.getElementById('note').value,
-        lineUserId: '' // 可依需要帶入 LIFF ID
+        lineUserId: ''
       };
 
-      // 呼叫 GAS (submitBooking)
       fetch(GAS_URL, {
         method: 'POST',
         mode: 'cors',
-        redirect: 'follow', // 核心優化：允許追蹤轉址
+        redirect: 'follow',
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8' // 核心優化：避免 CORS 預檢失敗
+          'Content-Type': 'text/plain;charset=utf-8'
         },
         body: JSON.stringify({
           action: 'submitBooking',
