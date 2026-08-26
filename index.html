@@ -55,12 +55,12 @@
     input:focus, select:focus, textarea:focus {
       border-color: #00c853;
     }
-    /* 紅色提醒字體類別 */
     .closed-days-notice {
       color: #d32f2f;
       font-size: 13.5px;
-      font-weight: 500;
+      font-weight: 600;
       margin-top: 6px;
+      min-height: 20px;
     }
     .error-message {
       color: #d32f2f;
@@ -95,15 +95,12 @@
     <h2 class="title">線上課程預約</h2>
 
     <form id="bookingForm">
-      <!-- 1. 預約日期 -->
       <div class="form-group">
         <label for="bookingDate">1. 請選擇預約日期</label>
         <input type="date" id="bookingDate" required>
-        <!-- 下方自動顯示未開放日期的紅字提示區域 -->
         <div id="closedDaysNotice" class="closed-days-notice"></div>
       </div>
 
-      <!-- 2. 可預約時段 -->
       <div class="form-group">
         <label for="bookingTime">2. 請選擇可預約時段</label>
         <select id="bookingTime" required disabled>
@@ -112,38 +109,32 @@
         <div id="noSlotMsg" class="error-message">該日期無開放預約時段，請選擇其他日期</div>
       </div>
 
-      <!-- 家長姓名 -->
       <div class="form-group">
         <label for="name">家長姓名</label>
         <input type="text" id="name" placeholder="請輸入姓名" required>
       </div>
 
-      <!-- 聯絡電話 -->
       <div class="form-group">
         <label for="phone">聯絡電話</label>
         <input type="tel" id="phone" placeholder="請輸入電話" required>
       </div>
 
-      <!-- Email -->
       <div class="form-group">
         <label for="email">Email 信箱</label>
         <input type="email" id="email" placeholder="用於接收確認信" required>
       </div>
 
-      <!-- 備註事項 -->
       <div class="form-group">
         <label for="note">備註事項</label>
         <textarea id="note" rows="3" placeholder="如有特殊需求請在此註明"></textarea>
       </div>
 
-      <!-- 送出按鈕 -->
       <button type="submit" id="submitBtn">確認預約</button>
     </form>
   </div>
 
   <script>
-    // ⚠️ 請填入您的 Apps Script 部署 URL
-    const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
 
     const bookingDateInput = document.getElementById('bookingDate');
     const bookingTimeSelect = document.getElementById('bookingTime');
@@ -152,7 +143,11 @@
     const bookingForm = document.getElementById('bookingForm');
     const submitBtn = document.getElementById('submitBtn');
 
-    // 網頁載入時，自動向 GAS 取得不開放的星期幾，並填寫紅字提示
+    // 限制只能選擇今天及未來的日期
+    const today = new Date().toISOString().split('T')[0];
+    bookingDateInput.min = today;
+
+    // 初始化：獲取不開放星期
     window.addEventListener('DOMContentLoaded', function() {
       fetch(GAS_URL, {
         method: 'POST',
@@ -170,7 +165,7 @@
       .catch(err => console.error('無法載入休假提示:', err));
     });
 
-    // 當選擇日期變更時
+    // 日期變更
     bookingDateInput.addEventListener('change', function() {
       const selectedDate = this.value;
       if (!selectedDate) return;
@@ -183,9 +178,7 @@
         method: 'POST',
         mode: 'cors',
         redirect: 'follow',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'getSlotsByDate',
           date: selectedDate
@@ -195,13 +188,11 @@
       .then(data => {
         if (data.success) {
           if (data.isHoliday) {
-            // 特殊休假日
             bookingTimeSelect.innerHTML = '<option value="">-- 本日休館 / 不開放 --</option>';
             bookingTimeSelect.disabled = true;
             noSlotMsg.textContent = data.message || '該日期為不開放預約日';
             noSlotMsg.style.display = 'block';
           } else if (data.slots && data.slots.length > 0) {
-            // 正常時段
             bookingTimeSelect.innerHTML = '<option value="">-- 請選擇時段 --</option>';
             data.slots.forEach(slotItem => {
               const option = document.createElement('option');
@@ -211,7 +202,6 @@
             });
             bookingTimeSelect.disabled = false;
           } else {
-            // 常規無開放時段
             bookingTimeSelect.innerHTML = '<option value="">-- 無可預約時段 --</option>';
             bookingTimeSelect.disabled = true;
             noSlotMsg.textContent = '該日期無開放預約時段，請選擇其他日期';
@@ -250,9 +240,7 @@
         method: 'POST',
         mode: 'cors',
         redirect: 'follow',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'submitBooking',
           formData: formData
