@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>線上課程預約</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; color: #333; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+    h2 { color: #00B900; text-align: center; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+    button { width: 100%; background-color: #00B900; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    button:disabled { background-color: #ccc; }
+    #loading { text-align: center; display: none; margin-top: 10px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>線上課程預約</h2>
+    <div id="loading">載入中，請稍候...</div>
+    <form id="bookingForm" style="display:none;">
+      <div class="form-group">
+        <label>選擇預約時段</label>
+        <select id="bookingTime" required></select>
+      </div>
+      <div class="form-group">
+        <label>家長姓名</label>
+        <input type="text" id="name" required placeholder="請輸入姓名">
+      </div>
+      <div class="form-group">
+        <label>聯絡電話</label>
+        <input type="tel" id="phone" required placeholder="請輸入電話">
+      </div>
+      <div class="form-group">
+        <label>Email 信箱</label>
+        <input type="email" id="email" required placeholder="接收確認信用">
+      </div>
+      <div class="form-group">
+        <label>備註事項</label>
+        <textarea id="note" rows="3" placeholder="特殊需求或學員狀況"></textarea>
+      </div>
+      <input type="hidden" id="lineUserId">
+      <button type="submit" id="submitBtn">確認預預約</button>
+    </form>
+  </div>
+
+  <script>
+    const LIFF_ID = '2011272724-gossLJr8';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
+
+    async function initLiff() {
+      document.getElementById('loading').style.display = 'block';
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        const profile = await liff.getProfile();
+        document.getElementById('lineUserId').value = profile.userId;
+        loadSlots();
+      } catch (err) {
+        alert('LIFF 初始化失敗：' + err.message);
+      }
+    }
+
+    async function loadSlots() {
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getSlots' })
+        }).then(r => r.json());
+
+        const select = document.getElementById('bookingTime');
+        select.innerHTML = '';
+        if (!res.slots || res.slots.length === 0) {
+          select.innerHTML = '<option value="">目前暫無可預約時段</option>';
+          document.getElementById('submitBtn').disabled = true;
+        } else {
+          res.slots.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.slot;
+            opt.textContent = s.display;
+            select.appendChild(opt);
+          });
+        }
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('bookingForm').style.display = 'block';
+      } catch (e) {
+        alert('載入時段失敗：' + e.message);
+      }
+    }
+
+    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = '預約處理中...';
+
+      const formData = {
+        bookingTime: document.getElementById('bookingTime').value,
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        note: document.getElementById('note').value,
+        lineUserId: document.getElementById('lineUserId').value
+      };
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'submitBooking', formData: formData })
+        }).then(r => r.json());
+
+        if (res.success) {
+          alert('預約成功！預約編號：' + res.bookingId);
+          liff.closeWindow();
+        } else {
+          alert('預約失敗：' + res.message);
+          btn.disabled = false;
+          btn.textContent = '確認預約';
+          loadSlots();
+        }
+      } catch (err) {
+        alert('網路連線失敗，請稍後再試');
+        btn.disabled = false;
+        btn.textContent = '確認預預約';
+      }
+    });
+
+    window.onload = initLiff;
+  </script>
+</body>
+</html>
