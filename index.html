@@ -52,14 +52,15 @@
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
 
     // 跨域 API 請求封裝
-    async function apiRequest(payload) {
-      const response = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      return await response.json();
-    }
+   async function apiRequest(payload) {
+  const response = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+    redirect: 'follow' // 加上這行，確保自動跟隨 GAS 的 HTTP 轉址
+  });
+  return await response.json();
+}
 
     async function initLiff() {
       try {
