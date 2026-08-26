@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>取消預約</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+    h2 { color: #E60012; text-align: center; }
+    .item { border-bottom: 1px solid #eee; padding: 10px 0; }
+    button { background-color: #E60012; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; float: right; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>我的預約紀錄 / 取消</h2>
+    <div id="loading">載入中...</div>
+    <div id="bookingList"></div>
+  </div>
+
+  <script>
+    const LIFF_ID = '2011272724-gossLJr8';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw6MeINoJ4V8ArQqihXnYdHjYxpslMV7RFal502Q5iQEHuXRFBUwS0d7oqo8YGOHTYJQA/exec';
+
+    async function init() {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      const profile = await liff.getProfile();
+      
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getUserBookings', userId: profile.userId })
+      }).then(r => r.json());
+
+      document.getElementById('loading').style.display = 'none';
+      const container = document.getElementById('bookingList');
+      if (!res.bookings || res.bookings.length === 0) {
+        container.innerHTML = '<p style="text-align:center;">您目前沒有有效預預約。</p>';
+        return;
+      }
+      res.bookings.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <span><b>${item.bookingTime}</b> (${item.name})</span>
+          <button onclick="cancel('${item.bookingId}')">取消預約</button>
+          <div style="clear:both;"></div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function cancel(bookingId) {
+      if (!confirm('確定要取消這筆預約嗎？')) return;
+      const profile = await liff.getProfile();
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'cancelBooking', bookingId: bookingId, userId: profile.userId })
+      }).then(r => r.json());
+
+      if (res.success) {
+        alert('已成功取消預預約！');
+        liff.closeWindow();
+      } else {
+        alert('取消失敗：' + res.message);
+      }
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
